@@ -1,0 +1,46 @@
+resources:
+ Endurovpc :
+   type: AWS::EC2::VPC
+   properties:
+     CidrBlock: 192.168.0.0/16
+     enableDnsSupport: true 
+     tags:
+       - key: Name
+         value: EnduroPublic1
+ EnduroPublicSubnet1:
+    - type: AWS::EC2::Subnet
+      properties:
+        availabilityZone: 
+        Fn::Select: 
+        - 0
+        - Fn::GetAZs: ""
+        VpcId: !Ref Endurovpc
+        MapPublicIpOnLaunch: true
+        CidrBlock: 192.168.1.0/24 
+        tags:
+          - key: Name
+            value: EnduroPublic1 
+ EnduroPrivateSubnet1:
+    - type: AWS::EC2::Subnet
+      properties:
+        availabilityZone: 
+        Fn::Select: 
+        - 0
+        - Fn::GetAZs: ""
+        VpcId: !Ref Endurovpc
+        MapPublicIpOnLaunch: true
+        CidrBlock: 192.168.2.0/24 
+        tags:
+          - key: Name
+            value: EnduroPrivate1 
+Enduroigw:
+  type: AWS::EC2::InternetGateway
+  properties:
+    tags:
+      - key: Name
+        value: EnduroIGW
+attachGateway:  
+  type: AWS::EC2::VPCGatewayAttachment
+  properties:
+    VpcId: !Ref Endurovpc
+    InternetGatewayId: !Ref Enduroigw
