@@ -8,7 +8,7 @@ Resources:
        - Key: Name
          Value: EnduroPublic1
  EnduroPublicSubnet1:
-    - Type: AWS::EC2::Subnet
+     Type: AWS::EC2::Subnet
       Properties:
         AvailabilityZone: 
         Fn::Select: 
@@ -21,7 +21,7 @@ Resources:
           - Key: Name
             Value: EnduroPublic1 
  EnduroPrivateSubnet1:
-    - Type: AWS::EC2::Subnet
+     Type: AWS::EC2::Subnet
       Properties:
         AvailabilityZone: 
         Fn::Select: 
