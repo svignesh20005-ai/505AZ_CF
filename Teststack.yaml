@@ -1,46 +1,47 @@
-resources:
+Resources:
  Endurovpc :
-   type: AWS::EC2::VPC
-   properties:
+   Type: AWS::EC2::VPC
+   Properties:
      CidrBlock: 192.168.0.0/16
-     enableDnsSupport: true 
-     tags:
-       - key: Name
-         value: EnduroPublic1
+     EnableDnsSupport: true 
+     Tags:
+       - Key: Name
+         Value: EnduroPublic1
  EnduroPublicSubnet1:
-    - type: AWS::EC2::Subnet
-      properties:
-        availabilityZone: 
+    - Type: AWS::EC2::Subnet
+      Properties:
+        AvailabilityZone: 
         Fn::Select: 
         - 0
         - Fn::GetAZs: ""
         VpcId: !Ref Endurovpc
         MapPublicIpOnLaunch: true
         CidrBlock: 192.168.1.0/24 
-        tags:
-          - key: Name
-            value: EnduroPublic1 
+        Tags:
+          - Key: Name
+            Value: EnduroPublic1 
  EnduroPrivateSubnet1:
-    - type: AWS::EC2::Subnet
-      properties:
-        availabilityZone: 
+    - Type: AWS::EC2::Subnet
+      Properties:
+        AvailabilityZone: 
         Fn::Select: 
         - 0
         - Fn::GetAZs: ""
         VpcId: !Ref Endurovpc
         MapPublicIpOnLaunch: true
         CidrBlock: 192.168.2.0/24 
-        tags:
-          - key: Name
-            value: EnduroPrivate1 
+        Tags:
+          - Key: Name
+            Value: EnduroPrivate1 
 Enduroigw:
-  type: AWS::EC2::InternetGateway
-  properties:
-    tags:
-      - key: Name
-        value: EnduroIGW
-attachGateway:  
-  type: AWS::EC2::VPCGatewayAttachment
-  properties:
+  Type: AWS::EC2::InternetGateway
+  Properties:
+    Tags:
+      - Key: Name
+        Value: EnduroIGW
+AttachGateway:  
+  Type: AWS::EC2::VPCGatewayAttachment
+  Properties:
     VpcId: !Ref Endurovpc
     InternetGatewayId: !Ref Enduroigw
+    
