@@ -1,13 +1,10 @@
 name: Deploy CloudFormation
-
 on:
   workflow_dispatch:
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
-    steps:
+  steps:
       - name: Configure Repo
         uses: actions/checkout@v4
 
@@ -28,4 +25,3 @@ run: |
       --parameter-overrides CustomKeyName=vockey \
       --capabilities CAPABILITY_NAMED_IAM
 
-    
