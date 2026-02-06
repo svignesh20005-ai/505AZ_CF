@@ -1,7 +1,6 @@
-name: Deploy CloudFormation Template
+name: Deploy CloudFormation Stack
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -12,13 +11,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: List repository files (debug)
-        run: ls -R
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -26,7 +22,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate CloudFormation template
-        run: aws cloudformation validate-template --template-body file://main-code.yaml
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://main-code.yaml
 
       - name: Deploy CloudFormation stack
         run: |
@@ -34,5 +32,5 @@ jobs:
             --template-file main-code.yaml \
             --stack-name my-main-stack \
             --capabilities CAPABILITY_NAMED_IAM \
-            --no-fail-on-empty-changeset
+            --no-fail-on-empty-changeset \
             --parameter-overrides KeyName=vockey
