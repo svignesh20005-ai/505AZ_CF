@@ -45,7 +45,7 @@
 #     VpcId: !Ref Endurovpc
 #     InternetGatewayId: !Ref Enduroigw
     
-    AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Week 2 CloudFormation template to create a VPC with one public subnet, one private subnet, and an Internet Gateway.
   
