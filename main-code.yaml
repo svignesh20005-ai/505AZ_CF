@@ -1,13 +1,12 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Enduro AWS Network Stack with EC2 Management Instance
+Description: Enduro Network Stack (VPC + Public/Private Subnets + IGW + Routes + EC2)
 
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: Existing EC2 KeyPair name
+    Description: Existing EC2 KeyPair name (e.g., vockey)
 
 Resources:
-
   EnduroVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -31,7 +30,7 @@ Resources:
       VpcId: !Ref EnduroVPC
       InternetGatewayId: !Ref EnduroIGW
 
-  PublicSubnet:
+  PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref EnduroVPC
@@ -40,12 +39,26 @@ Resources:
       AvailabilityZone: !Select [0, !GetAZs ""]
       Tags:
         - Key: Name
-          Value: PublicSubnet
+          Value: EnduroPublicSubnet1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref EnduroVPC
+      CidrBlock: 192.168.2.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: EnduroPrivateSubnet1
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref EnduroVPC
+      Tags:
+        - Key: Name
+          Value: EnduroPublicRouteTable
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -55,46 +68,50 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref EnduroIGW
 
-  PublicSubnetAssociation:
+  PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnet1
       RouteTableId: !Ref PublicRouteTable
 
-  EC2Role:
-    Type: AWS::IAM::Role
+  ManagementSG:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      RoleName: EnduroEC2Role
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-
-  EC2InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref EC2Role
+      GroupDescription: Allow SSH (demo) - tighten later
+      VpcId: !Ref EnduroVPC
+      SecurityGroupIngress:
+        # For assignment/demo: allow SSH from anywhere.
+        # In real design, restrict to your IP or bastion.
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: EnduroManagementSG
 
   ManagementEC2:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
-      SubnetId: !Ref PublicSubnet
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref EC2InstanceProfile
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}"
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref ManagementSG
+      ImageId: ami-0c2b8ca1dad447f8a  # Ubuntu 22.04 LTS (us-east-1) - if this fails, we’ll replace with your lab’s allowed AMI
       Tags:
         - Key: Name
           Value: EnduroManagementEC2
 
 Outputs:
-  VPCId:
+  VpcId:
+    Description: VPC ID
     Value: !Ref EnduroVPC
-  EC2Id:
+
+  PublicSubnetId:
+    Description: Public Subnet ID
+    Value: !Ref PublicSubnet1
+
+  InstanceId:
+    Description: Management EC2 Instance ID
     Value: !Ref ManagementEC2
