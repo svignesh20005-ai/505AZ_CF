@@ -1,240 +1,70 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "505AZ Week 4 - Dual VPC + Peering + Security Groups + Management EC2 (SSM-enabled)"
+Description: Enduro AWS Network Stack with EC2 Management Instance
 
 Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: "Existing EC2 KeyPair name (e.g., vockey). Used if you later want SSH via a bastion."
-    Default: vockey
-
-  VpcAName:
-    Type: String
-    Default: "EnduroVPC-A-Public"
-  VpcBName:
-    Type: String
-    Default: "EnduroVPC-B-Private"
-
-  VpcACidr:
-    Type: String
-    Default: "10.10.0.0/16"
-  VpcBCidr:
-    Type: String
-    Default: "10.20.0.0/16"
-
-  VpcAPublicSubnetCidr:
-    Type: String
-    Default: "10.10.1.0/24"
-  VpcAPrivateSubnetCidr:
-    Type: String
-    Default: "10.10.2.0/24"
-  VpcBPrivateSubnetCidr:
-    Type: String
-    Default: "10.20.1.0/24"
-
-  LatestAmiId:
-    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
-    Description: "Amazon Linux 2023 latest AMI via SSM public parameter"
-    Default: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+    Description: Existing EC2 KeyPair name
 
 Resources:
-  # ---------------------------
-  # VPC A (Public/App VPC)
-  # ---------------------------
-  VpcA:
+
+  EnduroVPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: !Ref VpcACidr
+      CidrBlock: 192.168.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Ref VpcAName
+          Value: EnduroVPC
 
-  VpcAInternetGateway:
+  EnduroIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: "Enduro-IGW-VPC-A"
+          Value: EnduroIGW
 
-  VpcAIGWAttachment:
+  AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref VpcA
-      InternetGatewayId: !Ref VpcAInternetGateway
+      VpcId: !Ref EnduroVPC
+      InternetGatewayId: !Ref EnduroIGW
 
-  VpcAPublicSubnet:
+  PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref VpcA
-      CidrBlock: !Ref VpcAPublicSubnetCidr
+      VpcId: !Ref EnduroVPC
+      CidrBlock: 192.168.1.0/24
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [0, !GetAZs ""]
       Tags:
         - Key: Name
-          Value: "VpcA-PublicSubnet-1"
+          Value: PublicSubnet
 
-  VpcAPrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VpcA
-      CidrBlock: !Ref VpcAPrivateSubnetCidr
-      MapPublicIpOnLaunch: false
-      AvailabilityZone: !Select [0, !GetAZs ""]
-      Tags:
-        - Key: Name
-          Value: "VpcA-PrivateSubnet-1"
-
-  VpcAPublicRouteTable:
+  PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref VpcA
-      Tags:
-        - Key: Name
-          Value: "VpcA-Public-RT"
+      VpcId: !Ref EnduroVPC
 
-  VpcAPublicRoute:
+  PublicRoute:
     Type: AWS::EC2::Route
-    DependsOn: VpcAIGWAttachment
+    DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref VpcAPublicRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref VpcAInternetGateway
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref EnduroIGW
 
-  VpcAPublicSubnetRouteAssoc:
+  PublicSubnetAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref VpcAPublicSubnet
-      RouteTableId: !Ref VpcAPublicRouteTable
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
 
-  # Private RT for VPC A (no NAT for now — Week4 focus is peering + segmentation)
-  VpcAPrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VpcA
-      Tags:
-        - Key: Name
-          Value: "VpcA-Private-RT"
-
-  VpcAPrivateSubnetRouteAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref VpcAPrivateSubnet
-      RouteTableId: !Ref VpcAPrivateRouteTable
-
-  # ---------------------------
-  # VPC B (Private/Management VPC)
-  # ---------------------------
-  VpcB:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: !Ref VpcBCidr
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      Tags:
-        - Key: Name
-          Value: !Ref VpcBName
-
-  VpcBPrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VpcB
-      CidrBlock: !Ref VpcBPrivateSubnetCidr
-      MapPublicIpOnLaunch: false
-      AvailabilityZone: !Select [0, !GetAZs ""]
-      Tags:
-        - Key: Name
-          Value: "VpcB-PrivateSubnet-1"
-
-  VpcBPrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VpcB
-      Tags:
-        - Key: Name
-          Value: "VpcB-Private-RT"
-
-  VpcBPrivateSubnetRouteAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref VpcBPrivateSubnet
-      RouteTableId: !Ref VpcBPrivateRouteTable
-
-  # ---------------------------
-  # VPC Peering (A <-> B) + Routes
-  # ---------------------------
-  VpcPeeringAB:
-    Type: AWS::EC2::VPCPeeringConnection
-    Properties:
-      VpcId: !Ref VpcA
-      PeerVpcId: !Ref VpcB
-      Tags:
-        - Key: Name
-          Value: "Peering-VpcA-VpcB"
-
-  # Route from VPC A private RT to VPC B via peering
-  RouteAtoB:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref VpcAPrivateRouteTable
-      DestinationCidrBlock: !Ref VpcBCidr
-      VpcPeeringConnectionId: !Ref VpcPeeringAB
-
-  # Route from VPC B private RT to VPC A via peering
-  RouteBtoA:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref VpcBPrivateRouteTable
-      DestinationCidrBlock: !Ref VpcACidr
-      VpcPeeringConnectionId: !Ref VpcPeeringAB
-
-  # ---------------------------
-  # Security Groups (Defense-in-depth skeleton)
-  # ---------------------------
-  WebTierSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "Web Tier SG placeholder (future ALB/ASG instances)."
-      VpcId: !Ref VpcA
-      SecurityGroupIngress:
-        # placeholder: you will later allow ALB -> Web (80/443)
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Ref VpcACidr
-      SecurityGroupEgress:
-        - IpProtocol: "-1"
-          CidrIp: "0.0.0.0/0"
-      Tags:
-        - Key: Name
-          Value: "SG-WebTier"
-
-  ManagementSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: "Management EC2 SG (private subnet)."
-      VpcId: !Ref VpcB
-      SecurityGroupIngress:
-        # No inbound from internet (private). Use SSM. Keep empty or restrict as needed.
-        - IpProtocol: -1
-          CidrIp: !Ref VpcBCidr
-      SecurityGroupEgress:
-        # Allow management instance to reach VPC A via peering for diagnostics
-        - IpProtocol: "-1"
-          CidrIp: !Ref VpcACidr
-        - IpProtocol: "-1"
-          CidrIp: !Ref VpcBCidr
-      Tags:
-        - Key: Name
-          Value: "SG-Management"
-
-  # ---------------------------
-  # IAM Role for SSM (so you can connect without SSH)
-  # ---------------------------
-  ManagementInstanceRole:
+  EC2Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "Enduro-Management-SSMRole-${AWS::StackName}"
+      RoleName: EnduroEC2Role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -245,57 +75,26 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
-  ManagementInstanceProfile:
+  EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: !Sub "Enduro-Management-Profile-${AWS::StackName}"
       Roles:
-        - !Ref ManagementInstanceRole
+        - !Ref EC2Role
 
-  # ---------------------------
-  # EC2 (REQUIRED): Management instance in VPC B Private Subnet
-  # ---------------------------
   ManagementEC2:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref LatestAmiId
-      InstanceType: t3.micro
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnet
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref ManagementInstanceProfile
-      SubnetId: !Ref VpcBPrivateSubnet
-      SecurityGroupIds:
-        - !Ref ManagementSG
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}"
       Tags:
         - Key: Name
-          Value: "Enduro-Management-EC2"
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          dnf update -y
-          echo "Management EC2 deployed via CloudFormation" > /etc/motd
+          Value: EnduroManagementEC2
 
 Outputs:
-  VpcAId:
-    Description: "VPC A ID (Public/App)"
-    Value: !Ref VpcA
-
-  VpcBId:
-    Description: "VPC B ID (Private/Management)"
-    Value: !Ref VpcB
-
-  PeeringId:
-    Description: "VPC Peering Connection ID"
-    Value: !Ref VpcPeeringAB
-
-  ManagementInstanceId:
-    Description: "Management EC2 Instance ID"
+  VPCId:
+    Value: !Ref EnduroVPC
+  EC2Id:
     Value: !Ref ManagementEC2
-
-  VpcAPublicSubnetId:
-    Value: !Ref VpcAPublicSubnet
-
-  VpcAPrivateSubnetId:
-    Value: !Ref VpcAPrivateSubnet
-
-  VpcBPrivateSubnetId:
-    Value: !Ref VpcBPrivateSubnet
