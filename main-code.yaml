@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Week 4 - Basic VPC with Public + Private Subnet, IGW, Routing"
+Description: "Week 4 – VPC with Public and Private Subnets, IGW, Routing"
 
 Resources:
   EnduroVPC:
@@ -74,10 +74,10 @@ Outputs:
     Description: "VPC ID"
     Value: !Ref EnduroVPC
 
-  PublicSubnet1Id:
-    Description: "Public Subnet 1 ID"
+  PublicSubnetId:
+    Description: "Public Subnet ID"
     Value: !Ref PublicSubnet1
 
-  PrivateSubnet1Id:
-    Description: "Private Subnet 1 ID"
+  PrivateSubnetId:
+    Description: "Private Subnet ID"
     Value: !Ref PrivateSubnet1
