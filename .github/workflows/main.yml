@@ -52,11 +52,11 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate CloudFormation template
-        run: aws cloudformation validate-template --template-body file://TestStack.yaml
+        run: aws cloudformation validate-template --template-body file://main-code.yaml
 
       - name: Deploy CloudFormation Stack
         run: |
           aws cloudformation deploy \
-            --template-file TestStack.yaml \
+            --template-file  main-code.yaml \
             --stack-name my-main-stack \
             --no-fail-on-empty-changeset
